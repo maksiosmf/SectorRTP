@@ -16,6 +16,16 @@ bounds:
 # Cooldown for /rtp in seconds. Bypassed by 'sectorrtp.bypass.cooldown'.
 cooldown: 60
 
+# Where to store cooldowns.
+#   AUTO   – Redis when EndSectors is available (shared across sectors),
+#            in-memory otherwise. RECOMMENDED.
+#   REDIS  – force Redis (uses EndSectors' Lettuce connection via reflection).
+#            The plugin disables itself if Redis is not reachable.
+#   MEMORY – local-only. Each sector has its own cooldown map – players can
+#            exploit this by hopping between sectors. Only use for single-
+#            server setups.
+cooldown-storage: "AUTO"
+
 # How many candidate location attempts before giving up.
 max-attempts: 30
 

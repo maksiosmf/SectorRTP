@@ -1,47 +1,32 @@
 package pl.maksios.sectorrtp.managers;
 
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Tracks per-player cooldowns for /rtp.
+ * Strategy interface for /rtp cooldown storage.
  *
- * <p>Cooldowns are stored as the expiry instant (epoch millis) so resets after
- * server reloads automatically expire. Backed by {@link ConcurrentHashMap}
- * because the command can be triggered from any thread (admin /rtp force
- * invoked from async context, plugin API calls, …).</p>
+ * <p>Two implementations are provided:</p>
+ * <ul>
+ *   <li>{@link MemoryCooldownManager} – local {@link java.util.concurrent.ConcurrentHashMap},
+ *       cooldowns are <b>not</b> shared between sectors.</li>
+ *   <li>{@link RedisCooldownManager} – shared via EndSectors'
+ *       {@code Common.getInstance().getRedisManager()} so the same UUID has
+ *       the same cooldown on every Paper server in the network.</li>
+ * </ul>
+ *
+ * <p>Use the Redis backend on multi-sector setups: otherwise a player can
+ * /rtp on sector_1, get teleported to sector_2 and immediately /rtp again
+ * because sector_2 has its own local map.</p>
  */
-public final class CooldownManager {
+public interface CooldownManager {
 
-    private final Map<UUID, Long> expiries = new ConcurrentHashMap<>();
+    boolean isOnCooldown(UUID id);
 
-    public boolean isOnCooldown(UUID id) {
-        Long until = expiries.get(id);
-        if (until == null) return false;
-        if (System.currentTimeMillis() >= until) {
-            expiries.remove(id, until);
-            return false;
-        }
-        return true;
-    }
+    long remainingMillis(UUID id);
 
-    public long remainingMillis(UUID id) {
-        Long until = expiries.get(id);
-        if (until == null) return 0L;
-        return Math.max(0L, until - System.currentTimeMillis());
-    }
+    void apply(UUID id, long millis);
 
-    public void apply(UUID id, long millis) {
-        if (millis <= 0L) return;
-        expiries.put(id, System.currentTimeMillis() + millis);
-    }
+    void reset(UUID id);
 
-    public void reset(UUID id) {
-        expiries.remove(id);
-    }
-
-    public void clear() {
-        expiries.clear();
-    }
+    default void clear() {}
 }

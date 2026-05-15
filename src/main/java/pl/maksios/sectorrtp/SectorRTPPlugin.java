@@ -14,7 +14,9 @@ import pl.maksios.sectorrtp.hooks.PlaceholderAPIHook;
 import pl.maksios.sectorrtp.listeners.PlayerMoveListener;
 import pl.maksios.sectorrtp.listeners.PlayerQuitListener;
 import pl.maksios.sectorrtp.managers.CooldownManager;
+import pl.maksios.sectorrtp.managers.MemoryCooldownManager;
 import pl.maksios.sectorrtp.managers.PendingTeleportManager;
+import pl.maksios.sectorrtp.managers.RedisCooldownManager;
 import pl.maksios.sectorrtp.managers.SafeChunkCacheManager;
 import pl.maksios.sectorrtp.services.CountdownService;
 import pl.maksios.sectorrtp.services.EffectService;
@@ -66,7 +68,7 @@ public final class SectorRTPPlugin extends JavaPlugin {
         PlaceholderAPIHook.initialize();
 
         // ---------- managers ----------
-        this.cooldownManager = new CooldownManager();
+        this.cooldownManager = createCooldownManager();
         this.pendingTeleportManager = new PendingTeleportManager();
         this.safeChunkCacheManager = new SafeChunkCacheManager(this);
 
@@ -126,5 +128,42 @@ public final class SectorRTPPlugin extends JavaPlugin {
         pluginConfig.load();
         messagesConfig.load();
         safeChunkCacheManager.invalidateAll();
+    }
+
+    /**
+     * Picks the cooldown backend based on configuration:
+     *
+     * <ul>
+     *   <li>{@code AUTO}   – Redis when EndSectors is present, in-memory otherwise.</li>
+     *   <li>{@code REDIS}  – force Redis; abort startup if it cannot be reached.</li>
+     *   <li>{@code MEMORY} – force in-memory (single-server setups).</li>
+     * </ul>
+     */
+    private CooldownManager createCooldownManager() {
+        PluginConfig.CooldownStorage mode = pluginConfig.getCooldownStorage();
+
+        if (mode == PluginConfig.CooldownStorage.MEMORY) {
+            getLogger().info("Cooldown storage: MEMORY (local only).");
+            return new MemoryCooldownManager();
+        }
+
+        boolean tryRedis = mode == PluginConfig.CooldownStorage.REDIS
+                || (mode == PluginConfig.CooldownStorage.AUTO && endSectorsHook.isPresent());
+
+        if (tryRedis) {
+            RedisCooldownManager redis = new RedisCooldownManager(this);
+            if (redis.initialize()) {
+                getLogger().info("Cooldown storage: REDIS (via EndSectors).");
+                return redis;
+            }
+            if (mode == PluginConfig.CooldownStorage.REDIS) {
+                getLogger().severe("cooldown-storage=REDIS but Redis is unreachable – disabling plugin.");
+                Bukkit.getPluginManager().disablePlugin(this);
+                return new MemoryCooldownManager(); // never used but keeps the field non-null
+            }
+        }
+
+        getLogger().info("Cooldown storage: MEMORY (fallback – EndSectors Redis not available).");
+        return new MemoryCooldownManager();
     }
 }

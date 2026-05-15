@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 public final class PluginConfig {
 
     public enum SectorSelectionMode { POOL, PATTERN, AUTO }
+    public enum CooldownStorage { AUTO, REDIS, MEMORY }
 
     private final SectorRTPPlugin plugin;
 
@@ -37,6 +38,7 @@ public final class PluginConfig {
 
     // generic
     private long cooldownMillis;
+    private CooldownStorage cooldownStorage;
     private int maxAttempts;
     private int sectorMargin;
     private int countdownSeconds;
@@ -122,6 +124,7 @@ public final class PluginConfig {
         maxZ = c.getInt("bounds.maxZ", 5000);
 
         cooldownMillis = Math.max(0, c.getLong("cooldown", 60)) * 1000L;
+        cooldownStorage = enumOrDefault(CooldownStorage.class, c.getString("cooldown-storage", "AUTO"), CooldownStorage.AUTO);
         maxAttempts = Math.max(1, c.getInt("max-attempts", 30));
         sectorMargin = Math.max(0, c.getInt("sector-margin", 32));
         countdownSeconds = Math.max(0, c.getInt("countdown-seconds", 3));
