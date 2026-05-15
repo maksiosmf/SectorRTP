@@ -100,7 +100,11 @@ public final class SafeLocationFinder {
                 try {
                     SafeLocation safe = evaluate(world, chunk, bounds, x, z, cfg);
                     if (safe != null) {
-                        plugin.getSafeChunkCacheManager().offer(safe);
+                        // Note: we intentionally do NOT cache locations that we
+                        // hand out to players. Doing so caused the "same spot
+                        // every /rtp" bug – the next call would just poll back
+                        // the freshly-cached entry. The cache is reserved for
+                        // background pre-warming (see SafeChunkCacheManager).
                         future.complete(safe);
                     } else {
                         attempt(bounds, attemptCount + 1, attemptCallback, future);

@@ -29,6 +29,7 @@ public final class PluginConfig {
 
     public enum SectorSelectionMode { POOL, PATTERN, AUTO }
     public enum CooldownStorage { AUTO, REDIS, MEMORY }
+    public enum RedisMode { AUTO, ENDSECTORS, STANDALONE }
 
     private final SectorRTPPlugin plugin;
 
@@ -40,6 +41,15 @@ public final class PluginConfig {
     private long cooldownMillis;
     private CooldownStorage cooldownStorage;
     private int maxAttempts;
+
+    // redis
+    private RedisMode redisMode;
+    private String redisHost;
+    private int redisPort;
+    private String redisPassword;
+    private int redisDatabase;
+    private int redisTimeoutMs;
+    private String redisKeyPrefix;
     private int sectorMargin;
     private int countdownSeconds;
     private double movementThreshold;
@@ -126,6 +136,14 @@ public final class PluginConfig {
         cooldownMillis = Math.max(0, c.getLong("cooldown", 60)) * 1000L;
         cooldownStorage = enumOrDefault(CooldownStorage.class, c.getString("cooldown-storage", "AUTO"), CooldownStorage.AUTO);
         maxAttempts = Math.max(1, c.getInt("max-attempts", 30));
+
+        redisMode = enumOrDefault(RedisMode.class, c.getString("redis.mode", "AUTO"), RedisMode.AUTO);
+        redisHost = c.getString("redis.host", "127.0.0.1");
+        redisPort = c.getInt("redis.port", 6379);
+        redisPassword = c.getString("redis.password", "");
+        redisDatabase = c.getInt("redis.database", 0);
+        redisTimeoutMs = c.getInt("redis.timeout-ms", 2000);
+        redisKeyPrefix = c.getString("redis.key-prefix", "sectorrtp");
         sectorMargin = Math.max(0, c.getInt("sector-margin", 32));
         countdownSeconds = Math.max(0, c.getInt("countdown-seconds", 3));
         movementThreshold = c.getDouble("movement-threshold", 0.5D);

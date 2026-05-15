@@ -18,6 +18,9 @@ import pl.maksios.sectorrtp.managers.MemoryCooldownManager;
 import pl.maksios.sectorrtp.managers.PendingTeleportManager;
 import pl.maksios.sectorrtp.managers.RedisCooldownManager;
 import pl.maksios.sectorrtp.managers.SafeChunkCacheManager;
+import pl.maksios.sectorrtp.redis.EndSectorsRedisCommands;
+import pl.maksios.sectorrtp.redis.JedisRedisCommands;
+import pl.maksios.sectorrtp.redis.RedisCommands;
 import pl.maksios.sectorrtp.services.CountdownService;
 import pl.maksios.sectorrtp.services.EffectService;
 import pl.maksios.sectorrtp.services.RtpService;
@@ -41,6 +44,7 @@ public final class SectorRTPPlugin extends JavaPlugin {
     @Getter private EndSectorsHook endSectorsHook;
 
     @Getter private CooldownManager cooldownManager;
+    @Getter private RedisCommands redisCommands;
     @Getter private PendingTeleportManager pendingTeleportManager;
     @Getter private SafeChunkCacheManager safeChunkCacheManager;
 
@@ -112,6 +116,7 @@ public final class SectorRTPPlugin extends JavaPlugin {
     public void onDisable() {
         if (countdownService != null) countdownService.shutdown();
         if (safeChunkCacheManager != null) safeChunkCacheManager.shutdown();
+        if (redisCommands != null) redisCommands.close();
         if (api != null) {
             Bukkit.getServicesManager().unregister(api);
             SectorRTPProvider.unregister();
@@ -131,39 +136,75 @@ public final class SectorRTPPlugin extends JavaPlugin {
     }
 
     /**
-     * Picks the cooldown backend based on configuration:
+     * Picks the cooldown backend based on configuration.
      *
-     * <ul>
-     *   <li>{@code AUTO}   – Redis when EndSectors is present, in-memory otherwise.</li>
-     *   <li>{@code REDIS}  – force Redis; abort startup if it cannot be reached.</li>
-     *   <li>{@code MEMORY} – force in-memory (single-server setups).</li>
-     * </ul>
+     * <p>Decision tree:</p>
+     * <ol>
+     *   <li>If {@code cooldown-storage = MEMORY} → local map.</li>
+     *   <li>Otherwise build a {@link RedisCommands}:
+     *     <ul>
+     *       <li>{@code redis.mode = ENDSECTORS} → reuse EndSectors' Lettuce
+     *           connection (verified by a ping write+read).</li>
+     *       <li>{@code redis.mode = STANDALONE} → open SectorRTP's own
+     *           Jedis pool.</li>
+     *       <li>{@code redis.mode = AUTO} → try EndSectors, fall back to
+     *           Jedis when the ping fails.</li>
+     *     </ul>
+     *   </li>
+     *   <li>If Redis is required but no backend works, the plugin disables
+     *       itself; otherwise it falls back to memory with a clear warning.</li>
+     * </ol>
      */
     private CooldownManager createCooldownManager() {
-        PluginConfig.CooldownStorage mode = pluginConfig.getCooldownStorage();
-
-        if (mode == PluginConfig.CooldownStorage.MEMORY) {
+        PluginConfig.CooldownStorage cooldownMode = pluginConfig.getCooldownStorage();
+        if (cooldownMode == PluginConfig.CooldownStorage.MEMORY) {
             getLogger().info("Cooldown storage: MEMORY (local only).");
             return new MemoryCooldownManager();
         }
 
-        boolean tryRedis = mode == PluginConfig.CooldownStorage.REDIS
-                || (mode == PluginConfig.CooldownStorage.AUTO && endSectorsHook.isPresent());
+        this.redisCommands = openRedis();
 
-        if (tryRedis) {
-            RedisCooldownManager redis = new RedisCooldownManager(this);
-            if (redis.initialize()) {
-                getLogger().info("Cooldown storage: REDIS (via EndSectors).");
-                return redis;
-            }
-            if (mode == PluginConfig.CooldownStorage.REDIS) {
-                getLogger().severe("cooldown-storage=REDIS but Redis is unreachable – disabling plugin.");
+        if (redisCommands == null) {
+            if (cooldownMode == PluginConfig.CooldownStorage.REDIS) {
+                getLogger().severe("cooldown-storage=REDIS but no Redis backend is usable – disabling plugin.");
                 Bukkit.getPluginManager().disablePlugin(this);
-                return new MemoryCooldownManager(); // never used but keeps the field non-null
+            } else {
+                getLogger().warning("Cooldown storage: MEMORY fallback – Redis is not available (cooldowns will NOT carry between sectors!).");
             }
+            return new MemoryCooldownManager();
         }
 
-        getLogger().info("Cooldown storage: MEMORY (fallback – EndSectors Redis not available).");
-        return new MemoryCooldownManager();
+        getLogger().info("Cooldown storage: REDIS via " + redisCommands.describe() + ".");
+        return new RedisCooldownManager(this, redisCommands, pluginConfig.getRedisKeyPrefix());
+    }
+
+    private RedisCommands openRedis() {
+        PluginConfig.RedisMode mode = pluginConfig.getRedisMode();
+
+        if (mode == PluginConfig.RedisMode.ENDSECTORS || mode == PluginConfig.RedisMode.AUTO) {
+            EndSectorsRedisCommands viaEndSectors = new EndSectorsRedisCommands(this);
+            if (viaEndSectors.tryBind() && viaEndSectors.ping()) {
+                return viaEndSectors;
+            }
+            if (mode == PluginConfig.RedisMode.ENDSECTORS) {
+                getLogger().warning("redis.mode=ENDSECTORS but binding/ping failed.");
+                return null;
+            }
+            getLogger().info("[Redis] EndSectors backend unavailable, falling back to standalone Jedis.");
+        }
+
+        if (mode == PluginConfig.RedisMode.STANDALONE || mode == PluginConfig.RedisMode.AUTO) {
+            JedisRedisCommands jedis = new JedisRedisCommands(this,
+                    pluginConfig.getRedisHost(),
+                    pluginConfig.getRedisPort(),
+                    pluginConfig.getRedisPassword(),
+                    pluginConfig.getRedisDatabase(),
+                    pluginConfig.getRedisTimeoutMs());
+            if (jedis.tryConnect()) {
+                return jedis;
+            }
+            jedis.close();
+        }
+        return null;
     }
 }

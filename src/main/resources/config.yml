@@ -17,14 +17,35 @@ bounds:
 cooldown: 60
 
 # Where to store cooldowns.
-#   AUTO   – Redis when EndSectors is available (shared across sectors),
-#            in-memory otherwise. RECOMMENDED.
-#   REDIS  – force Redis (uses EndSectors' Lettuce connection via reflection).
-#            The plugin disables itself if Redis is not reachable.
+#   AUTO   – Redis when available (shared across sectors), in-memory otherwise.
+#            RECOMMENDED for the multi-sector setup.
+#   REDIS  – force Redis; the plugin disables itself if Redis isn't reachable.
 #   MEMORY – local-only. Each sector has its own cooldown map – players can
-#            exploit this by hopping between sectors. Only use for single-
-#            server setups.
+#            exploit this by hopping between sectors.
 cooldown-storage: "AUTO"
+
+# ---------------------------------------------------------------------
+# Redis – shared storage for cooldowns and (future) other multi-sector state.
+# ---------------------------------------------------------------------
+# Two ways to connect:
+#   ENDSECTORS – reuse the Lettuce connection EndSectors already owns
+#                (reflection-based, no extra socket). Free if EndSectors
+#                actually connected to Redis – verified by a ping on startup.
+#   STANDALONE – open SectorRTP's own Jedis pool using host/port/password
+#                below. Use this when EndSectors' Redis isn't usable or
+#                when you want to point /rtp cooldowns at a different
+#                Redis database.
+#   AUTO       – try ENDSECTORS, fall back to STANDALONE if the ping
+#                fails. RECOMMENDED.
+redis:
+  mode: "AUTO"
+  host: "127.0.0.1"
+  port: 6379
+  password: ""
+  database: 0
+  timeout-ms: 2000
+  # Hash prefix – the cooldown key becomes "<prefix>:cooldowns".
+  key-prefix: "sectorrtp"
 
 # How many candidate location attempts before giving up.
 max-attempts: 30

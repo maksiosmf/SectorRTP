@@ -46,6 +46,10 @@ dependencies {
     // bStats (shaded)
     implementation("org.bstats:bstats-bukkit:3.1.0")
 
+    // Jedis – stand-alone Redis backend, shaded + relocated so we never
+    // clash with EndSectors' Lettuce.
+    implementation("redis.clients:jedis:5.2.0")
+
     // Adventure MiniMessage is bundled in Paper – use compileOnly to avoid duplicate classpath
     compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
     compileOnly("net.kyori:adventure-platform-bukkit:4.3.4")
@@ -71,8 +75,14 @@ tasks {
         archiveClassifier.set("")
         archiveFileName.set("${project.name}-${project.version}.jar")
         relocate("org.bstats", "pl.maksios.sectorrtp.libs.bstats")
+        relocate("redis.clients.jedis", "pl.maksios.sectorrtp.libs.jedis")
+        relocate("org.apache.commons.pool2", "pl.maksios.sectorrtp.libs.pool2")
+        relocate("org.json", "pl.maksios.sectorrtp.libs.json")
+        relocate("com.google.gson", "pl.maksios.sectorrtp.libs.gson")
         minimize {
             exclude(dependency("org.bstats:.*"))
+            exclude(dependency("redis.clients:jedis:.*"))
+            exclude(dependency("org.apache.commons:commons-pool2:.*"))
         }
         mergeServiceFiles()
     }
