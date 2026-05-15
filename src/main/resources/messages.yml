@@ -1,9 +1,9 @@
 # =====================================================================
 #  SectorRTP – messages
 #  Supports MiniMessage syntax and PlaceholderAPI (if installed).
-#  Available placeholders:
-#    {player}, {sector}, {world}, {x}, {y}, {z}, {cooldown},
-#    {attempts}, {time}, {reason}
+#  Available MiniMessage placeholders (use as <placeholder> tags):
+#    <player>, <sector>, <world>, <x>, <y>, <z>, <cooldown>,
+#    <attempts>, <time>, <reason>, <version>
 # =====================================================================
 
 prefix: "<gradient:#9B59B6:#3498DB><bold>SectorRTP</bold></gradient> <gray>»</gray> "
@@ -11,30 +11,30 @@ prefix: "<gradient:#9B59B6:#3498DB><bold>SectorRTP</bold></gradient> <gray>»</g
 no-permission: "<prefix><red>You do not have permission to do that.</red>"
 players-only: "<prefix><red>This command is for players only.</red>"
 unknown-subcommand: "<prefix><red>Unknown sub-command. Use </red><white>/rtp</white><red>, </red><white>/rtp reload</white><red> or </red><white>/rtp force <player></white><red>.</red>"
-reload-success: "<prefix><green>Configuration reloaded in <white>{time}ms</white>.</green>"
-reload-failed: "<prefix><red>Configuration reload failed: <white>{reason}</white></red>"
+reload-success: "<prefix><green>Configuration reloaded in <white><time>ms</white>.</green>"
+reload-failed: "<prefix><red>Configuration reload failed: <white><reason></white></red>"
 
-cooldown: "<prefix><yellow>You must wait <white>{time}s</white> before using /rtp again.</yellow>"
+cooldown: "<prefix><yellow>You must wait <white><time>s</white> before using /rtp again.</yellow>"
 already-pending: "<prefix><yellow>You already have a pending teleport. Please wait…</yellow>"
 locked-during-transfer: "<prefix><yellow>Hold on — the previous cross-sector teleport is still settling.</yellow>"
 
-searching: "<prefix><gray>Searching for a safe location…</gray>"
-search-actionbar: "<dark_gray>[</dark_gray><gradient:#9B59B6:#3498DB>searching</gradient><dark_gray>]</dark_gray> <gray>attempts</gray> <white>{attempts}</white>"
+searching: "<prefix><gray>Searching for a safe location in <white><sector></white>…</gray>"
+search-actionbar: "<dark_gray>[</dark_gray><gradient:#9B59B6:#3498DB>searching</gradient><dark_gray>]</dark_gray> <gray>attempts</gray> <white><attempts></white>"
 
-countdown-actionbar: "<dark_gray>[</dark_gray><gradient:#3498DB:#9B59B6>RTP</gradient><dark_gray>]</dark_gray> <gray>teleporting in</gray> <white>{time}s</white>"
+countdown-actionbar: "<dark_gray>[</dark_gray><gradient:#3498DB:#9B59B6>RTP</gradient><dark_gray>]</dark_gray> <gray>teleporting in</gray> <white><time>s</white>"
 countdown-cancelled: "<prefix><red>Teleport cancelled because you moved.</red>"
 
 no-sectors-available: "<prefix><red>No online sectors are currently available.</red>"
-no-safe-location: "<prefix><red>Could not find a safe location after <white>{attempts}</white> attempts.</red>"
-teleport-failed: "<prefix><red>Teleport failed: <white>{reason}</white></red>"
+no-safe-location: "<prefix><red>Could not find a safe location after <white><attempts></white> attempts.</red>"
+teleport-failed: "<prefix><red>Teleport failed: <white><reason></white></red>"
 
-teleport-success: "<prefix><green>Teleported to <white>{sector}</white> at <white>{x}, {y}, {z}</white>.</green>"
+teleport-success: "<prefix><green>Teleported to <white><sector></white> at <white><x>, <y>, <z></white>.</green>"
 title-success: "<gradient:#27AE60:#2ECC71><bold>RTP</bold></gradient>"
-subtitle-success: "<gray>Welcome to <white>{sector}</white></gray>"
+subtitle-success: "<gray>Welcome to <white><sector></white></gray>"
 
 # Admin
-admin-force-success: "<prefix><green>Forced /rtp for <white>{player}</white>.</green>"
-admin-force-not-online: "<prefix><red>Player <white>{player}</white> is not online.</red>"
+admin-force-success: "<prefix><green>Forced /rtp for <white><player></white>.</green>"
+admin-force-not-online: "<prefix><red>Player <white><player></white> is not online.</red>"
 
 # Update checker
-update-available: "<prefix><yellow>A new version of SectorRTP is available: <white>{version}</white></yellow>"
+update-available: "<prefix><yellow>A new version of SectorRTP is available: <white><version></white></yellow>"

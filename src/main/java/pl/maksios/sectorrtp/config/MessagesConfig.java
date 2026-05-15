@@ -20,9 +20,13 @@ import java.util.Map;
 /**
  * Loads and renders messages.yml.
  *
- * <p>All entries are interpreted as <b>MiniMessage</b> strings. The literal
- * tag {@code <prefix>} is replaced by the value of {@code prefix} before
- * parsing so users can compose messages naturally.</p>
+ * <p>All entries are interpreted as <b>MiniMessage</b> strings. Placeholders
+ * use MiniMessage tag syntax — e.g. {@code <sector>}, {@code <x>}, not
+ * {@code {sector}} — because they are registered via
+ * {@link Placeholder#parsed(String, String)}.</p>
+ *
+ * <p>The literal tag {@code <prefix>} is substituted before parsing so users
+ * can compose messages naturally.</p>
  *
  * <p>If PlaceholderAPI is installed, {@code %xxx_yyy%} placeholders are
  * expanded as well — see {@link PlaceholderAPIHook}.</p>
