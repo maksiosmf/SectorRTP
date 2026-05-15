@@ -1,0 +1,23 @@
+# Build output
+build/
+.gradle/
+bin/
+out/
+
+# Local libs (compile-only)
+libs/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

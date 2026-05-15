@@ -1,0 +1,212 @@
+# =====================================================================
+#  SectorRTP – configuration
+#  Designed for the EndSectors plugin (Redis + NATS multi-sector setup).
+# =====================================================================
+
+# Bounds used when EndSectors is NOT loaded (standalone fallback mode).
+# When integrated with EndSectors these values are ignored and the
+# bounds of the randomly selected sector are used instead.
+bounds:
+  world: "world"
+  minX: -5000
+  maxX: 5000
+  minZ: -5000
+  maxZ: 5000
+
+# Cooldown for /rtp in seconds. Bypassed by 'sectorrtp.bypass.cooldown'.
+cooldown: 60
+
+# How many candidate location attempts before giving up.
+max-attempts: 30
+
+# Margin (in blocks) kept away from sector borders, so players are not
+# teleported into a knockBorder zone of the EndSectors plugin.
+sector-margin: 32
+
+# Pre-teleport countdown in seconds. 0 disables the countdown.
+# Cancelled if the player moves (unless they have sectorrtp.bypass.movement).
+countdown-seconds: 3
+
+# Maximum vertical distance the player may move during countdown
+# before considering it as 'moved'. Small values prevent jitter from
+# cancelling the countdown.
+movement-threshold: 0.5
+
+# ---------------------------------------------------------------------
+# Sector pool – EndSectors integration
+# ---------------------------------------------------------------------
+sectors:
+  # Selection mode.
+  #   POOL    – pick uniformly at random from 'pool' (recommended for 1-4 setup).
+  #   PATTERN – pick any sector whose name matches 'name-pattern'.
+  #   AUTO    – pick any online SECTOR-type sector (excluding SPAWN/QUEUE/AFK).
+  mode: "POOL"
+
+  # Used when mode = POOL.
+  # These are the names of the EndSectors sectors that should be
+  # eligible targets (must match the names defined in EndSectors config).
+  pool:
+    - "sector_1"
+    - "sector_2"
+    - "sector_3"
+    - "sector_4"
+
+  # Used when mode = PATTERN. A Java regex.
+  name-pattern: "^sector_\\d+$"
+
+  # Always-excluded sector names.
+  blacklist:
+    - "queue"
+    - "afk"
+
+  # Worlds players may NOT be teleported to.
+  blacklist-worlds:
+    - "world_nether"
+    - "world_the_end"
+    - "queue_world"
+
+  # If true the player will never be RTP'd back into the sector they
+  # are currently on (forces a cross-sector teleport). Useful for PvP
+  # rotation servers.
+  prefer-cross-sector: false
+
+  # If true, only sectors flagged as ONLINE by EndSectors are eligible.
+  require-online: true
+
+# ---------------------------------------------------------------------
+# Cross-sector teleport (Redis / NATS fallback protection)
+# ---------------------------------------------------------------------
+# When the chosen sector lives on a different physical Paper server the
+# EndSectors plugin teleports the player via NATS. There is a race
+# condition: if the player is moved too quickly, the source server can
+# still hold the player's session and re-spawn them at the previous
+# sector ("fallback"). These options harden the cross-sector flow.
+cross-sector:
+  # Activate UserProfile.transferOffsetUntil so the destination server
+  # nudges the player a few blocks forward, preventing portal/back-tp loops.
+  activate-transfer-offset: true
+
+  # Lock duration (ms) during which the SAME player cannot trigger
+  # another /rtp. Prevents double-execution while the Redis/NATS round
+  # trip is still in flight.
+  pending-lock-ms: 7000
+
+  # Always save the random location to UserProfile BEFORE issuing the
+  # transfer packet, with preserveCoordinates=true, so the destination
+  # server spawns the player at the RTP location, not the old one.
+  preserve-coordinates: true
+
+  # Force EndSectors to bypass the spawn-to-spawn block (we want /rtp
+  # to be able to move SPAWN players into a real survival sector).
+  force-transfer: true
+
+# ---------------------------------------------------------------------
+# Safety
+# ---------------------------------------------------------------------
+safety:
+  # Minimum Y a player can be teleported to. Anything below is treated as void.
+  min-y: 40
+  # Maximum Y a player can be teleported to. Anything above is rejected.
+  max-y: 200
+  # Require N empty blocks above the ground block.
+  required-air-above: 2
+  # Require the ground block to be solid.
+  require-solid-ground: true
+
+  # Unsafe materials that may never be the ground block underneath the player.
+  unsafe-blocks:
+    - "LAVA"
+    - "WATER"
+    - "FIRE"
+    - "SOUL_FIRE"
+    - "CAMPFIRE"
+    - "SOUL_CAMPFIRE"
+    - "MAGMA_BLOCK"
+    - "CACTUS"
+    - "SWEET_BERRY_BUSH"
+    - "POWDER_SNOW"
+    - "WITHER_ROSE"
+    - "POINTED_DRIPSTONE"
+    - "VOID_AIR"
+    - "CAVE_AIR"
+
+  # Blacklisted blocks the player must NOT occupy at body or head height.
+  blacklisted-occupy-blocks:
+    - "LAVA"
+    - "WATER"
+    - "FIRE"
+    - "SOUL_FIRE"
+    - "COBWEB"
+    - "POWDER_SNOW"
+
+  # Reject locations whose surrounding biome is in this list.
+  biome-blacklist: [ ]
+
+# ---------------------------------------------------------------------
+# Safe location cache
+# ---------------------------------------------------------------------
+# Pre-computed locations are reused for a short window to flatten TPS spikes
+# when many players /rtp at once.
+cache:
+  enabled: true
+  per-sector-size: 32
+  ttl-seconds: 300
+
+# ---------------------------------------------------------------------
+# Effects
+# ---------------------------------------------------------------------
+effects:
+  particles:
+    enabled: true
+    type: "PORTAL"
+    count: 80
+    offset-x: 0.5
+    offset-y: 1.0
+    offset-z: 0.5
+    speed: 0.1
+  sounds:
+    pre-teleport:
+      enabled: true
+      sound: "ENTITY_ENDERMAN_TELEPORT"
+      volume: 1.0
+      pitch: 1.0
+    post-teleport:
+      enabled: true
+      sound: "ENTITY_PLAYER_LEVELUP"
+      volume: 1.0
+      pitch: 1.0
+    fail:
+      enabled: true
+      sound: "ENTITY_VILLAGER_NO"
+      volume: 1.0
+      pitch: 1.0
+  bossbar:
+    enabled: true
+    color: "PURPLE"     # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+    overlay: "PROGRESS" # PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
+  title:
+    enabled: true
+    fade-in-ms: 250
+    stay-ms: 2000
+    fade-out-ms: 500
+
+# ---------------------------------------------------------------------
+# Update checker (GitHub Releases)
+# ---------------------------------------------------------------------
+update-checker:
+  enabled: true
+  repository: "maksiosmf/SectorRTP"
+  # Notify ops on join.
+  notify-ops: true
+
+# ---------------------------------------------------------------------
+# bStats
+# ---------------------------------------------------------------------
+metrics:
+  enabled: true
+  plugin-id: 24001
+
+# ---------------------------------------------------------------------
+# Debug
+# ---------------------------------------------------------------------
+debug: false

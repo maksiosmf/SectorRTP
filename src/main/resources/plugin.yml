@@ -1,0 +1,34 @@
+name: ${name}
+version: ${version}
+main: pl.maksios.sectorrtp.SectorRTPPlugin
+api-version: "1.21"
+load: POSTWORLD
+author: maksios
+description: ${description}
+website: https://github.com/maksiosmf/SectorRTP
+softdepend: [EndSectors, PlaceholderAPI, ProtocolLib]
+
+commands:
+  rtp:
+    description: Randomly teleport to an active sector.
+    aliases: [randomtp, randomteleport, srtp]
+    usage: /rtp [reload|force <player>]
+    permission: sectorrtp.use
+
+permissions:
+  sectorrtp.use:
+    description: Allows the player to use /rtp.
+    default: true
+  sectorrtp.admin:
+    description: Admin permission (reload, force).
+    default: op
+    children:
+      sectorrtp.bypass.cooldown: true
+      sectorrtp.bypass.movement: true
+      sectorrtp.use: true
+  sectorrtp.bypass.cooldown:
+    description: Bypass /rtp cooldown.
+    default: false
+  sectorrtp.bypass.movement:
+    description: Do not cancel countdown when moving.
+    default: false
